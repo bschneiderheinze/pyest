@@ -31,6 +31,7 @@ class SigmaPointOptions:
         Compute the lambda parameter for the unscented transform
 
     """
+
     def __init__(self, alpha=1e-3, beta=2, kappa=0):
         self.alpha = alpha
         self.beta = beta
@@ -40,7 +41,10 @@ class SigmaPointOptions:
         lam = self.alpha**2 * (nx + self.kappa) - nx  # UT lambda parameter
         return lam
 
-def unscented_transform(m, cov, g, sigma_pt_opts, cov_type='full', add_noise=None, residual_fun=None, mean_fun=None, g_args=()):
+
+def unscented_transform(m, cov, g, sigma_pt_opts, cov_type='full',
+                        add_noise=None, residual_fun=None, mean_fun=None,
+                        g_args=()):
     """
     Computes the unscented transform of an input vector and covariance.
 
@@ -95,8 +99,9 @@ def unscented_transform(m, cov, g, sigma_pt_opts, cov_type='full', add_noise=Non
     elif cov_type == 'cholesky':
         S = cov
         if not np.allclose(S, np.tril(S)):
-            raise BadCholeskyFactor('Provided cholesky factor is not lower-triangular')
-        #assert np.allclose(S, np.tril(S)), 'Provided cholesky factor is not lower-triangular'
+            raise BadCholeskyFactor(
+                'Provided cholesky factor is not lower-triangular')
+        # assert np.allclose(S, np.tril(S)), 'Provided cholesky factor is not lower-triangular'
     else:
         raise ValueError('Unrecognized covariance type.')
 
@@ -125,15 +130,19 @@ def unscented_transform(m, cov, g, sigma_pt_opts, cov_type='full', add_noise=Non
             cov_t += add_noise
     elif cov_type == 'cholesky':
         if add_noise is not None:
-            _, cov_t = qr(np.hstack([np.tile(np.sqrt(sigmas.wc[1:]),(len(y0),1)) * Dt[:, 1:].T, add_noise]).T, mode='economic')
+            _, cov_t = qr(np.hstack([
+                np.tile(np.sqrt(sigmas.wc[1:]), (len(y0), 1)) * Dt[:, 1:],
+                add_noise]).T, mode='economic')
         else:
-            _, cov_t = qr((np.tile(np.sqrt(sigmas.wc[1:]),(len(y0),1)) * Dt[:, 1:]).T, mode='economic')
+            _, cov_t = qr(
+                (np.tile(np.sqrt(sigmas.wc[1:]), (len(y0), 1)) * Dt[:, 1:]).T, mode='economic')
         cov_t = make_chol_diag_positive(cov_t.T).T
-        cov_t = choldowndate(cov_t,np.sqrt(-sigmas.wc[0]) * Dt[:, 0]).T
+        cov_t = choldowndate(cov_t, np.sqrt(-sigmas.wc[0]) * Dt[:, 0]).T
     else:
         raise ValueError('Unrecognized covariance type.')
 
     return mt, cov_t, Dt, sigmas, y
+
 
 def angular_residual(y, m):
     ''' Compute angular residuals between y and m
@@ -154,6 +163,7 @@ def angular_residual(y, m):
     res[res > np.pi] -= 2*np.pi
     res[res < -np.pi] += 2*np.pi
     return res
+
 
 def optimize_angle(angles, weights, max_iterations=100, tolerance=1e-6):
 
@@ -179,6 +189,7 @@ def optimize_angle(angles, weights, max_iterations=100, tolerance=1e-6):
         theta_hat = theta_hat + 2*np.pi
     return theta_hat
 
+
 class SigmaPoints(object):
     """
     Generate sigma points for the Unscented Kalman Filter.
@@ -197,15 +208,18 @@ class SigmaPoints(object):
 
     Notes
     -----
-    The function follows the 2n+1 sigma point rule, where n is the dimension of the mean vector x.
+    The function follows the 2n+1 sigma point rule, where n is the dimension
+    of the mean vector x.
     """
+
     def __init__(self, m, S, opts):
         n = len(m)
         lambda_ = opts.lambda_(n)
         gamma_squared = lambda_ + n
         # composite scaling factor for scaled unscented transform
         gamma = np.sqrt(gamma_squared)
-        self.wm = np.hstack([lambda_/gamma_squared, np.repeat(1/(2*gamma_squared), 2*n)])
+        self.wm = np.hstack(
+            [lambda_/gamma_squared, np.repeat(1/(2*gamma_squared), 2*n)])
         self.wc = self.wm.copy()
         self.wc[0] += 1 - opts.alpha**2 + opts.beta
         delta = gamma*S
