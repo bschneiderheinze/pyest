@@ -5,9 +5,29 @@ from typing import Any, Callable
 from . linalg import is_pos_def, is_square_matrix
 
 
-def create_rev_metadata(filename=None):
+def create_rev_metadata(filename=None, calling_filename=None):
+    """ create a metadata file with git sha, calling filename, and timestamp
 
-    calling_filename = __file__
+    Parameters
+    ----------
+    filename : str, optional
+        if provided, write metadata to this file
+    calling_filename : str, optional
+        if provided, use this as the calling filename in the metadata
+        otherwise, use __file__
+    Returns
+    -------
+    metadata : str
+        the metadata string
+    calling_filename : str
+        the calling filename used in the metadata
+    Notes
+    -----
+    This function requires that git is installed and that the code is in a
+    git repository.
+    """
+    if calling_filename is None:
+        calling_filename = __file__
     git_call = 'git describe --match=NeVeRmAtCh --always --abbrev=40 --dirty'
     sha = subprocess.check_output(git_call, shell=True, universal_newlines=True)
 
