@@ -32,15 +32,15 @@ def test_sigma_points():
 
 def test_unscented_transform():
     m = np.array([6, 7])
-    n = m.shape[0]
+    nx = m.shape[0]
     Stemp = np.array([[0.6, 0.5], [0.1, 1.0]])
     P = Stemp @ Stemp.T
-    Schol = cholesky(P,lower=True)
+    Schol = cholesky(P, lower=True)
 
     alpha = 1e-3
     kappa = 0
     beta = 2
-    opts = pysp.SigmaPointOptions(alpha,beta,kappa)
+    opts = pysp.SigmaPointOptions(alpha, beta, kappa)
     f = np.sin
 
     mt, Pt, Dt, SP, y = pysp.unscented_transform(
@@ -70,6 +70,13 @@ def test_unscented_transform():
     npt.assert_almost_equal(Dt_des, Dt, decimal=15)
     npt.assert_almost_equal(SP_des, SP.X, decimal=15)
     npt.assert_almost_equal(wc_des, SP.wc, decimal=15)
+
+    # repeat using square root factor with additive noise
+    Qchol = np.array([[0.2, 0], [1, 1.4]])
+    mt, St, Dt, SP, y = pysp.unscented_transform(
+        m, Schol, f, opts, cov_type='cholesky', add_noise=Qchol)
+    npt.assert_almost_equal(mt_des, mt, decimal=15)
+    npt.assert_almost_equal(Pt_des + Qchol@Qchol.T, St@St.T, decimal=10)
 
     # test checking of lower triangular cholesky factor
     fail(pysp.unscented_transform, BadCholeskyFactor, m, Schol.T, f, opts, cov_type='cholesky')
