@@ -632,6 +632,8 @@ class EkfdUpdate(KalmanDiscreteUpdate):
 
     Parameters
     ----------
+    h  : callable
+        measurement function of the form :math:`h(x, ...)`
     R  : ndarray
         (ny,ny) measurement noise covariance matrix
     H  : ndarray or callable

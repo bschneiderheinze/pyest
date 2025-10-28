@@ -256,6 +256,8 @@ class GmekfUpdate(EkfdUpdate, GaussianMixtureUpdate):
 
     Parameters
     ----------
+    h  : callable
+        measurement function of the form :math:`h(x, ...)`
     H  : ndarray or callable
         (nz,nx) measurement Jacobian matrix
         z_k = H(tk, xk, *args) @ x. If provided an ndarray instead, H will
