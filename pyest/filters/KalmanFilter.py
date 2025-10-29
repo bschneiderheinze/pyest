@@ -636,10 +636,8 @@ class EkfdUpdate(KalmanDiscreteUpdate):
         measurement function of the form :math:`h(x, ...)`
     R  : ndarray
         (ny,ny) measurement noise covariance matrix
-    H  : ndarray or callable
-        (nz,nx) measurement Jacobian matrix
-        z_k = H(tk, xk, *args) @ x. If provided an ndarray instead, H will
-        automatically be recast as a callable.
+    H  : callable
+        (nz,nx) measurement Jacobian matrix of the form :math:`H(x)`
     L  : (optional) ndarray
         (nz,ny) mapping matrix mapping measurement noise into
         measurement space
@@ -649,9 +647,6 @@ class EkfdUpdate(KalmanDiscreteUpdate):
     p : (optional) scalar
         underweighting factor. p=1 results in no underweighting. p-->0 results
         in no covariance update
-
-    Originally written by Keith LeGrand, March 2019, 
-    Adapted for extended Kf by Aditya Desai, September 2025
     """
 
     def __init__(self, h, R, H, L=None, h_args=(), cov_method='general', p=None):
@@ -709,6 +704,7 @@ class EkfdUpdate(KalmanDiscreteUpdate):
         Pkm : ndarray
             (nx,nx) prior covariance matrix at time k
         Hk : ndarray
+            (nz,nx) measurement function Jacobian evaluated at mkm
         h_args : (optional) tuple
             deterministic parameters to be passed to measurement function
 
@@ -744,7 +740,7 @@ class EkfdUpdate(KalmanDiscreteUpdate):
         Pkm : ndarray
             (nx,nx) prior covariance matrix at time k
         Hk : ndarray
-            (nz,nx) measurement matrix
+            (nz,nx) measurement function Jacobian evaluated at mkm
 
         Returns
         -------
@@ -753,10 +749,12 @@ class EkfdUpdate(KalmanDiscreteUpdate):
         """
         return Pkm @ Hk.T
 
-    def cross_cov(self, Pkm, h_args=()):
+    def cross_cov(self, mkm, Pkm, h_args=()):
         """ compute cross covariance
         Parameters
         ----------
+        mkm : ndarray
+            (nx,) prior mean at time k
         Pkm : ndarray
             (nx,nx) prior covariance matrix at time k
         h_args : (optional) tuple
@@ -768,7 +766,7 @@ class EkfdUpdate(KalmanDiscreteUpdate):
             (nx,nz) cross covariance
         """
         h_args = make_tuple(h_args)
-        Hk = self._H(*h_args)
+        Hk = self._H(mkm,*h_args)
         return self.__cross_cov(Pkm, Hk)
 
 
@@ -779,7 +777,7 @@ class EkfdUpdate(KalmanDiscreteUpdate):
         mkm : ndarray
             (nx,) prior mean at time k
         Hk : ndarray
-            (nz,nx) measurement matrix
+            (nz,nx) measurement function Jacobian evaluated at mkm
 
         Returns
         -------
@@ -803,12 +801,10 @@ class EkfdUpdate(KalmanDiscreteUpdate):
             (nz,) predicted measurement at time k
         """
         h_args = make_tuple(h_args)
-        hk_func = lambda mkm: self._h(mkm, *h_args)
-        print(hk_func)
-        return self.__expected_meas(mkm, hk_func)
+        return self.h(mkm, *h_args)
 
-    def update(self, mkm, Pkm, z, R=None, H=None, h_args=(), interm_vals=False):
-        """ perform Kalman filter update
+    def update(self, mkm, Pkm, z, h=None, R=None, H=None, h_args=(), interm_vals=False):
+        """ perform Extended Kalman filter update
 
         Parameters
         ----------
@@ -818,12 +814,12 @@ class EkfdUpdate(KalmanDiscreteUpdate):
             (nx,nx) prior covariance matrix at time k
         z  : ndarray
             (nz,) measurement at time k
+        h  : callable
+            measurement function of the form :math:`h(x, ...)`. If not provided, self.h will be used.
         R  : (optional) ndarray
-            (ny,ny) measurement noise covariance matrix
-        H  : (optional) ndarray or callable
-            (nz,nx) measurement Jacobian matrix
-            z_k = H(tk, xk, *args) @ x. If provided an ndarray instead, H will
-            automatically be recast as a callable.
+            (ny,ny) measurement noise covariance matrix. If not provided, self.R will be used.
+        H  : (optional) callable
+            (nz,nx) measurement Jacobian matrix measurement Jacobian matrix of the form :math:`H(x)`. If not provided, self.H will be used.
         h_args : (optional) tuple
             deterministic parameters to be passed to measurement function
 
@@ -843,21 +839,19 @@ class EkfdUpdate(KalmanDiscreteUpdate):
             gain matrix
         zhat : ndarray
             predicted measurement
-
-        Written by Keith LeGrand, March 2019
         """
         #TODO: check measurement size
+        if h is not None:
+            self.h = h
         if H is not None:
             self.H = H
-
         if R is not None:
             self.R = R
 
         h_args = make_tuple(h_args)
-        Hk = self._H(mkm, *h_args)
+        Hk = self.H(mkm, *h_args)
         hk_func = lambda mkm: self._h(mkm, *h_args)
 
-        assert(self._H is self.H), "H and _H are not the same somehow..."
         # predicted measurement
         w = self.__expected_meas(mkm, hk_func)
         W = self.__innovations_cov(Pkm, Hk)

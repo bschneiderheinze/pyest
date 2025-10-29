@@ -258,10 +258,8 @@ class GmekfUpdate(EkfdUpdate, GaussianMixtureUpdate):
     ----------
     h  : callable
         measurement function of the form :math:`h(x, ...)`
-    H  : ndarray or callable
-        (nz,nx) measurement Jacobian matrix
-        z_k = H(tk, xk, *args) @ x. If provided an ndarray instead, H will
-        automatically be recast as a callable.
+    H  : callable
+        (nz,nx) measurement Jacobian matrix of the form :math:`H(x)`
     R  : ndarray
         (ny,ny) measurement noise covariance matrix
     L  : (optional) ndarray
@@ -270,8 +268,6 @@ class GmekfUpdate(EkfdUpdate, GaussianMixtureUpdate):
     cov_method : (optional) string
         method to use for covariance update. Valid options include 'general'
         (default), 'Joseph', 'standard', and 'KWK'.
-
-    Written by Keith LeGrand, March 2019
     """
 
     def __init__(self, *args, **kwargs):
@@ -315,7 +311,6 @@ class GmekfUpdate(EkfdUpdate, GaussianMixtureUpdate):
             gain matrix
         zhat : (ndarray)
             predicted measurement
-
         """
         mp, Pp, interm = super().update(m, P, z, interm_vals=True, h_args=h_args)
         q = self.__lin_gauss_likelihood_agreement(z, interm['zhat'], interm['W'])
@@ -360,7 +355,6 @@ class GmekfUpdate(EkfdUpdate, GaussianMixtureUpdate):
             gain matrix
         zhat : (ndarray)
             predicted measurement
-
         """
         return self.lin_gauss_cond_likelihood_prod(m, P, z, h_args=h_args, interm_vals=interm_vals)
 
